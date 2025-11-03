@@ -7,11 +7,13 @@ from typing import List, Dict, Any
 class Block:
     """Represents a single block in the blockchain"""
     
-    def __init__(self, index: int, timestamp: str, transactions: List[Dict], previous_hash: str):
+    def __init__(self, index: int, timestamp: str, transactions: List[Dict], previous_hash: str, nonce: int = 0, difficulty: int = 0):
         self.index = index
         self.timestamp = timestamp
         self.transactions = transactions
         self.previous_hash = previous_hash
+        self.nonce = nonce
+        self.difficulty = difficulty  # 0 means no PoW, >0 means PoW with that difficulty
         self.hash = self.calculate_hash()
     
     def calculate_hash(self) -> str:
@@ -20,7 +22,8 @@ class Block:
             "index": self.index,
             "timestamp": self.timestamp,
             "transactions": self.transactions,
-            "previous_hash": self.previous_hash
+            "previous_hash": self.previous_hash,
+            "nonce": self.nonce
         }, sort_keys=True)
         return hashlib.sha256(block_string.encode()).hexdigest()
     
@@ -31,16 +34,38 @@ class Block:
             "timestamp": self.timestamp,
             "transactions": self.transactions,
             "previous_hash": self.previous_hash,
+            "nonce": self.nonce,
+            "difficulty": self.difficulty,
             "hash": self.hash
         }
+    
+    def mine_block(self, difficulty: int) -> int:
+        """Mine the block using proof-of-work
+        
+        Args:
+            difficulty: Number of leading zeros required in hash
+            
+        Returns:
+            Number of hash attempts (nonce) required
+        """
+        target = "0" * difficulty
+        attempts = 0
+        
+        while not self.hash.startswith(target):
+            self.nonce += 1
+            attempts += 1
+            self.hash = self.calculate_hash()
+        
+        return attempts
 
 
 class Blockchain:
     """Represents the blockchain"""
     
-    def __init__(self):
+    def __init__(self, difficulty: int = 2):
         self.chain: List[Block] = []
         self.pending_transactions: List[Dict] = []
+        self.difficulty = difficulty
         self.create_genesis_block()
     
     def create_genesis_block(self):
@@ -52,17 +77,32 @@ class Blockchain:
         """Get the most recent block in the chain"""
         return self.chain[-1]
     
-    def add_block(self, transactions: List[Dict]):
-        """Add a new block to the blockchain"""
+    def add_block(self, transactions: List[Dict], mine_with_pow: bool = False):
+        """Add a new block to the blockchain
+        
+        Args:
+            transactions: List of transactions to include in the block
+            mine_with_pow: Whether to use proof-of-work mining
+            
+        Returns:
+            tuple: (new_block, attempts) where attempts is number of hashes calculated
+        """
         latest_block = self.get_latest_block()
+        difficulty_used = self.difficulty if mine_with_pow else 0
         new_block = Block(
             index=latest_block.index + 1,
             timestamp=datetime.now().isoformat(),
             transactions=transactions,
-            previous_hash=latest_block.hash
+            previous_hash=latest_block.hash,
+            difficulty=difficulty_used
         )
+        
+        attempts = 0
+        if mine_with_pow:
+            attempts = new_block.mine_block(self.difficulty)
+        
         self.chain.append(new_block)
-        return new_block
+        return new_block, attempts
     
     def is_chain_valid(self) -> bool:
         """Verify the integrity of the blockchain"""
@@ -98,11 +138,28 @@ class Blockchain:
         """Get all pending transactions from the mempool"""
         return self.pending_transactions
     
-    def mine_pending_transactions(self) -> Block | None:
-        """Mine all pending transactions into a new block"""
-        if not self.pending_transactions:
-            return None
+    def mine_pending_transactions(self, use_pow: bool = False) -> tuple[Block | None, int]:
+        """Mine all pending transactions into a new block
         
-        new_block = self.add_block(self.pending_transactions.copy())
+        Args:
+            use_pow: Whether to use proof-of-work for mining
+            
+        Returns:
+            tuple: (new_block, attempts) where attempts is number of hashes calculated
+        """
+        if not self.pending_transactions:
+            return None, 0
+        
+        new_block, attempts = self.add_block(self.pending_transactions.copy(), mine_with_pow=use_pow)
         self.pending_transactions = []
-        return new_block
+        return new_block, attempts
+    
+    def set_difficulty(self, difficulty: int):
+        """Set the mining difficulty level"""
+        if difficulty < 1 or difficulty > 6:
+            raise ValueError("Difficulty must be between 1 and 6")
+        self.difficulty = difficulty
+    
+    def get_difficulty(self) -> int:
+        """Get the current mining difficulty"""
+        return self.difficulty

@@ -183,16 +183,48 @@ with tab3:
 # Tab 4: Mine Block
 with tab4:
     st.header("⛏️ Mine Block")
-    st.markdown("Mine pending transactions into a new block")
+    st.markdown("Mine pending transactions into a new block with optional proof-of-work")
     
     pending = st.session_state.blockchain.get_pending_transactions()
+    current_difficulty = st.session_state.blockchain.get_difficulty()
     
+    # Mining Settings
+    st.subheader("⚙️ Mining Settings")
+    col_settings1, col_settings2 = st.columns([1, 1])
+    
+    with col_settings1:
+        use_pow = st.checkbox("Enable Proof-of-Work Mining", value=False, 
+                             help="When enabled, miners must find a nonce that produces a hash with the required number of leading zeros")
+        
+        if use_pow:
+            st.info(f"ℹ️ Current Difficulty: {current_difficulty} (requires {current_difficulty} leading zeros)")
+    
+    with col_settings2:
+        if use_pow:
+            new_difficulty = st.select_slider(
+                "Adjust Difficulty Level:",
+                options=[1, 2, 3, 4, 5, 6],
+                value=current_difficulty,
+                help="Higher difficulty requires more computational work. Difficulty >4 may take several seconds."
+            )
+            
+            if new_difficulty != current_difficulty:
+                if st.button("Update Difficulty"):
+                    st.session_state.blockchain.set_difficulty(new_difficulty)
+                    st.success(f"Difficulty updated to {new_difficulty}")
+                    st.rerun()
+    
+    st.markdown("---")
+    
+    # Mining Information
     col1, col2 = st.columns([1, 1])
     
     with col1:
         st.subheader("Mining Information")
         st.write(f"**Pending Transactions:** {len(pending)}")
         st.write(f"**Current Chain Length:** {len(st.session_state.blockchain.chain)} blocks")
+        st.write(f"**Mining Difficulty:** {current_difficulty}")
+        st.write(f"**Proof-of-Work:** {'Enabled' if use_pow else 'Disabled'}")
         
         if pending:
             st.info("⛏️ Ready to mine new block")
@@ -206,11 +238,20 @@ with tab4:
             st.write(f"**Transactions to Include:** {len(pending)}")
             total_volume = sum(tx['amount'] for tx in pending)
             st.write(f"**Total Transaction Volume:** {total_volume:.2f} coins")
+            
+            if use_pow:
+                target_pattern = "0" * current_difficulty
+                st.write(f"**Target Hash Pattern:** `{target_pattern}...`")
     
     st.markdown("---")
     
     if st.button("⛏️ Mine Block", type="primary", disabled=len(pending) == 0):
         try:
+            # Show mining progress if using PoW
+            if use_pow:
+                mining_placeholder = st.empty()
+                mining_placeholder.info("⛏️ Mining in progress... Finding valid nonce...")
+            
             # Update balances for all pending transactions
             for tx in pending:
                 st.session_state.wallet_manager.update_balances(
@@ -220,13 +261,30 @@ with tab4:
                 )
             
             # Mine the block
-            new_block = st.session_state.blockchain.mine_pending_transactions()
+            import time
+            start_time = time.time()
+            new_block, attempts = st.session_state.blockchain.mine_pending_transactions(use_pow=use_pow)
+            end_time = time.time()
+            mining_time = end_time - start_time
             
             if new_block:
                 st.success(f"✅ Block #{new_block.index} mined successfully!")
                 st.balloons()
-                st.write(f"**Block Hash:** `{new_block.hash}`")
-                st.write(f"**Transactions Processed:** {len(new_block.transactions)}")
+                
+                col_result1, col_result2 = st.columns([1, 1])
+                
+                with col_result1:
+                    st.write(f"**Block Hash:** `{new_block.hash}`")
+                    st.write(f"**Nonce:** {new_block.nonce}")
+                    st.write(f"**Transactions Processed:** {len(new_block.transactions)}")
+                
+                with col_result2:
+                    if use_pow:
+                        st.write(f"**Hash Attempts:** {attempts:,}")
+                        st.write(f"**Mining Time:** {mining_time:.2f} seconds")
+                        hash_rate = attempts / mining_time if mining_time > 0 else 0
+                        st.write(f"**Hash Rate:** {hash_rate:.0f} H/s")
+                    
                 st.info("💰 All balances have been updated!")
                 st.rerun()
             else:
@@ -270,12 +328,21 @@ with tab5:
                 st.write(f"**Timestamp:** {block['timestamp']}")
                 st.write(f"**Hash:** `{block['hash'][:32]}...`")
                 st.write(f"**Previous Hash:** `{block['previous_hash'][:32]}...`")
+                st.write(f"**Nonce:** {block.get('nonce', 0)}")
             
             with col2:
                 if block['index'] == 0:
                     st.info("🎉 Genesis Block (First block in the chain)")
                 else:
                     st.write(f"**Transactions:** {len(block['transactions'])}")
+                    
+                    # Show if block was mined with PoW
+                    block_difficulty = block.get('difficulty', 0)
+                    if block_difficulty > 0:
+                        leading_zeros = len(block['hash']) - len(block['hash'].lstrip('0'))
+                        st.success(f"⛏️ Proof-of-Work: Difficulty {block_difficulty} ({leading_zeros} leading zeros, nonce: {block.get('nonce', 0)})")
+                    else:
+                        st.info("Simple hash (no PoW)")
             
             # Display transactions
             if block['transactions']:
@@ -386,7 +453,14 @@ with tab7:
     - Balances are updated only when blocks are mined
     - This demonstrates how real blockchains process transactions in batches
     
-    **7. Transaction Verification**
+    **7. Proof-of-Work (Optional)**
+    - Miners can enable proof-of-work to add computational difficulty
+    - Requires finding a nonce that produces a hash with leading zeros
+    - Difficulty can be adjusted from 1-6 (higher = more computational work)
+    - Shows mining attempts, time, and hash rate
+    - Demonstrates how Bitcoin and other blockchains prevent spam
+    
+    **8. Transaction Verification**
     - All transactions are digitally signed
     - Signatures are verified before adding to the mempool
     - Invalid transactions are rejected
@@ -409,11 +483,12 @@ with tab7:
     
     #### 📚 Educational Purpose:
     
-    This is a simplified blockchain for learning purposes. Production blockchains include:
-    - Proof of Work / Proof of Stake consensus mechanisms
-    - Network distribution across multiple nodes
-    - Advanced cryptography and security measures
-    - Transaction pools and mining rewards
+    This simulator demonstrates core blockchain concepts. Production blockchains also include:
+    - Network distribution across multiple nodes (peer-to-peer)
+    - Mining rewards and incentive systems
+    - Advanced consensus mechanisms (Proof of Stake, etc.)
+    - Smart contracts and programmable logic
+    - Much higher difficulty levels (Bitcoin uses difficulty ~25+ trillion)
     
     ---
     
