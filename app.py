@@ -420,6 +420,106 @@ with tab6:
             
             st.markdown("---")
             
+            # Transaction History
+            st.subheader("📜 Transaction History")
+            
+            user_transactions = st.session_state.blockchain.get_user_transactions(selected_user)
+            
+            if not user_transactions:
+                st.info("No transactions found for this user")
+            else:
+                # Filter controls
+                col_filter1, col_filter2, col_filter3 = st.columns([1, 1, 1])
+                
+                with col_filter1:
+                    filter_type = st.selectbox(
+                        "Filter by type:",
+                        ["All", "Sent", "Received"],
+                        key=f"filter_type_{selected_user}"
+                    )
+                
+                with col_filter2:
+                    search_term = st.text_input(
+                        "Search counterparty:",
+                        key=f"search_{selected_user}",
+                        placeholder="Enter username..."
+                    )
+                
+                with col_filter3:
+                    sort_order = st.selectbox(
+                        "Sort by:",
+                        ["Newest First", "Oldest First", "Amount (High to Low)", "Amount (Low to High)"],
+                        key=f"sort_{selected_user}"
+                    )
+                
+                # Apply filters
+                filtered_transactions = user_transactions.copy()
+                
+                if filter_type == "Sent":
+                    filtered_transactions = [tx for tx in filtered_transactions if tx['sender'] == selected_user]
+                elif filter_type == "Received":
+                    filtered_transactions = [tx for tx in filtered_transactions if tx['receiver'] == selected_user]
+                
+                if search_term:
+                    filtered_transactions = [
+                        tx for tx in filtered_transactions
+                        if search_term.lower() in tx['sender'].lower() or search_term.lower() in tx['receiver'].lower()
+                    ]
+                
+                # Sort transactions
+                if sort_order == "Newest First":
+                    filtered_transactions = sorted(filtered_transactions, key=lambda x: x['timestamp'], reverse=True)
+                elif sort_order == "Oldest First":
+                    filtered_transactions = sorted(filtered_transactions, key=lambda x: x['timestamp'])
+                elif sort_order == "Amount (High to Low)":
+                    filtered_transactions = sorted(filtered_transactions, key=lambda x: x['amount'], reverse=True)
+                elif sort_order == "Amount (Low to High)":
+                    filtered_transactions = sorted(filtered_transactions, key=lambda x: x['amount'])
+                
+                # Display statistics
+                total_sent = sum(tx['amount'] for tx in user_transactions if tx['sender'] == selected_user)
+                total_received = sum(tx['amount'] for tx in user_transactions if tx['receiver'] == selected_user)
+                net_flow = total_received - total_sent
+                
+                col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
+                with col_stat1:
+                    st.metric("Total Transactions", len(user_transactions))
+                with col_stat2:
+                    st.metric("Sent", f"{total_sent:.2f} coins")
+                with col_stat3:
+                    st.metric("Received", f"{total_received:.2f} coins")
+                with col_stat4:
+                    st.metric("Net Flow", f"{net_flow:+.2f} coins")
+                
+                st.write(f"**Showing {len(filtered_transactions)} of {len(user_transactions)} transactions**")
+                st.markdown("---")
+                
+                # Display filtered transactions
+                for i, tx in enumerate(filtered_transactions):
+                    is_sender = tx['sender'] == selected_user
+                    direction = "↗️ SENT" if is_sender else "↙️ RECEIVED"
+                    counterparty = tx['receiver'] if is_sender else tx['sender']
+                    amount_display = f"-{tx['amount']:.2f}" if is_sender else f"+{tx['amount']:.2f}"
+                    
+                    with st.expander(f"{direction} {amount_display} coins - {counterparty}", expanded=False):
+                        col_tx1, col_tx2 = st.columns([1, 1])
+                        
+                        with col_tx1:
+                            st.write(f"**From:** {tx['sender']}")
+                            st.write(f"**To:** {tx['receiver']}")
+                            st.write(f"**Amount:** {tx['amount']:.2f} coins")
+                            st.write(f"**Block:** #{tx['block_index']}")
+                        
+                        with col_tx2:
+                            st.write(f"**Timestamp:** {tx['timestamp']}")
+                            st.write(f"**Block Hash:** `{tx['block_hash'][:16]}...`")
+                            if tx.get('verified'):
+                                st.success("✅ Verified")
+                            else:
+                                st.error("❌ Not Verified")
+            
+            st.markdown("---")
+            
             # Public Key
             st.subheader("🔓 Public Key")
             st.text_area("Public Key (Share this for receiving payments):", wallet.public_key, height=150, key=f"pub_{selected_user}")

@@ -201,3 +201,26 @@ class Blockchain:
     def get_difficulty(self) -> int:
         """Get the current mining difficulty"""
         return self.difficulty
+    
+    def get_user_transactions(self, username: str) -> List[Dict]:
+        """Get all transactions for a specific user (as sender or receiver)
+        
+        Args:
+            username: The username to get transactions for
+            
+        Returns:
+            List of transactions with block information
+        """
+        user_transactions = []
+        
+        for block in self.chain:
+            for tx in block.transactions:
+                if tx.get('sender') == username or tx.get('receiver') == username:
+                    # Add block information to transaction
+                    tx_with_block = tx.copy()
+                    tx_with_block['block_index'] = block.index
+                    tx_with_block['block_hash'] = block.hash
+                    tx_with_block['block_timestamp'] = block.timestamp
+                    user_transactions.append(tx_with_block)
+        
+        return user_transactions
