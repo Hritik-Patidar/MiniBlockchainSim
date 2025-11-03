@@ -11,9 +11,6 @@ if 'blockchain' not in st.session_state:
 if 'wallet_manager' not in st.session_state:
     st.session_state.wallet_manager = WalletManager()
 
-if 'pending_transactions' not in st.session_state:
-    st.session_state.pending_transactions = []
-
 # Page configuration
 st.set_page_config(
     page_title="Mini-Blockchain Simulator",
@@ -26,9 +23,11 @@ st.title("⛓️ Mini-Blockchain Simulator")
 st.markdown("---")
 
 # Create tabs
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "👤 User Management", 
     "💸 Create Transaction", 
+    "📋 Transaction Pool",
+    "⛏️ Mine Block",
     "⛓️ Blockchain Explorer",
     "👛 User Wallets",
     "ℹ️ About"
@@ -137,28 +136,115 @@ with tab2:
                             "verified": is_valid
                         }
                         
-                        # Add to pending transactions
-                        st.session_state.pending_transactions.append(complete_transaction)
+                        # Add to mempool (pending transactions)
+                        st.session_state.blockchain.add_transaction_to_pool(complete_transaction)
                         
-                        # Update balances
-                        st.session_state.wallet_manager.update_balances(sender, receiver, amount)
-                        
-                        # Add block to blockchain
-                        st.session_state.blockchain.add_block([complete_transaction])
-                        
-                        st.success("✅ Transaction created, signed, and added to blockchain!")
-                        st.balloons()
-                        
-                        # Clear pending transactions
-                        st.session_state.pending_transactions = []
+                        st.success("✅ Transaction created, signed, and added to mempool!")
+                        st.info("ℹ️ Transaction is pending. Go to 'Mine Block' tab to mine it into the blockchain.")
                     else:
                         st.error("❌ Signature verification failed!")
                         
             except Exception as e:
                 st.error(f"Error creating transaction: {str(e)}")
 
-# Tab 3: Blockchain Explorer
+# Tab 3: Transaction Pool (Mempool)
 with tab3:
+    st.header("📋 Transaction Pool (Mempool)")
+    st.markdown("View pending transactions waiting to be mined into blocks")
+    
+    pending = st.session_state.blockchain.get_pending_transactions()
+    
+    if not pending:
+        st.info("📭 No pending transactions in the mempool")
+    else:
+        st.success(f"📬 {len(pending)} transaction(s) waiting to be mined")
+        st.markdown("---")
+        
+        for i, tx in enumerate(pending):
+            with st.expander(f"Transaction #{i+1}: {tx['sender']} → {tx['receiver']}", expanded=True):
+                col1, col2 = st.columns([1, 1])
+                
+                with col1:
+                    st.write(f"**From:** {tx['sender']}")
+                    st.write(f"**To:** {tx['receiver']}")
+                    st.write(f"**Amount:** {tx['amount']:.2f} coins")
+                
+                with col2:
+                    st.write(f"**Timestamp:** {tx['timestamp']}")
+                    st.write(f"**Status:** ⏳ Pending")
+                    if tx.get('verified'):
+                        st.success("✅ Signature Verified")
+                    else:
+                        st.error("❌ Signature Not Verified")
+                
+                if st.checkbox(f"Show signature (Tx #{i+1})", key=f"mempool_sig_{i}"):
+                    st.code(tx.get('signature', 'No signature')[:100] + "...", language="text")
+
+# Tab 4: Mine Block
+with tab4:
+    st.header("⛏️ Mine Block")
+    st.markdown("Mine pending transactions into a new block")
+    
+    pending = st.session_state.blockchain.get_pending_transactions()
+    
+    col1, col2 = st.columns([1, 1])
+    
+    with col1:
+        st.subheader("Mining Information")
+        st.write(f"**Pending Transactions:** {len(pending)}")
+        st.write(f"**Current Chain Length:** {len(st.session_state.blockchain.chain)} blocks")
+        
+        if pending:
+            st.info("⛏️ Ready to mine new block")
+        else:
+            st.warning("📭 No transactions to mine")
+    
+    with col2:
+        st.subheader("Block Preview")
+        if pending:
+            st.write(f"**New Block Index:** {len(st.session_state.blockchain.chain)}")
+            st.write(f"**Transactions to Include:** {len(pending)}")
+            total_volume = sum(tx['amount'] for tx in pending)
+            st.write(f"**Total Transaction Volume:** {total_volume:.2f} coins")
+    
+    st.markdown("---")
+    
+    if st.button("⛏️ Mine Block", type="primary", disabled=len(pending) == 0):
+        try:
+            # Update balances for all pending transactions
+            for tx in pending:
+                st.session_state.wallet_manager.update_balances(
+                    tx['sender'], 
+                    tx['receiver'], 
+                    tx['amount']
+                )
+            
+            # Mine the block
+            new_block = st.session_state.blockchain.mine_pending_transactions()
+            
+            if new_block:
+                st.success(f"✅ Block #{new_block.index} mined successfully!")
+                st.balloons()
+                st.write(f"**Block Hash:** `{new_block.hash}`")
+                st.write(f"**Transactions Processed:** {len(new_block.transactions)}")
+                st.info("💰 All balances have been updated!")
+                st.rerun()
+            else:
+                st.error("Failed to mine block")
+                
+        except Exception as e:
+            st.error(f"Error mining block: {str(e)}")
+    
+    # Show mining history
+    if len(st.session_state.blockchain.chain) > 1:
+        st.markdown("---")
+        st.subheader("Recent Blocks")
+        recent_blocks = st.session_state.blockchain.get_all_blocks()[-5:]
+        for block in reversed(recent_blocks[1:]):  # Skip genesis block
+            st.write(f"📦 Block #{block['index']} - {len(block['transactions'])} tx - Hash: `{block['hash'][:16]}...`")
+
+# Tab 5: Blockchain Explorer
+with tab5:
     st.header("Blockchain Explorer")
     st.markdown("View all blocks and transactions in the blockchain")
     
@@ -216,8 +302,8 @@ with tab3:
                     
                     st.markdown("---")
 
-# Tab 4: User Wallets
-with tab4:
+# Tab 6: User Wallets
+with tab6:
     st.header("User Wallets")
     st.markdown("View wallet details including public/private keys and balances")
     
@@ -257,8 +343,8 @@ with tab4:
             else:
                 st.info("Check the box above to reveal your private key")
 
-# Tab 5: About
-with tab5:
+# Tab 7: About
+with tab7:
     st.header("About This Application")
     
     st.markdown("""
@@ -286,20 +372,33 @@ with tab5:
     
     **4. User Wallets**
     - Each user starts with 100 coins
-    - Balances are tracked and updated with each transaction
+    - Balances are tracked and updated when transactions are mined
     - Public keys serve as wallet addresses
     
-    **5. Transaction Verification**
+    **5. Transaction Pool (Mempool)**
+    - Transactions are collected in a pending pool before being mined
+    - Users can view pending transactions waiting to be added to blocks
+    - Mimics real blockchain behavior where transactions are pooled
+    
+    **6. Mining Process**
+    - Pending transactions must be mined into blocks
+    - Mining takes all pending transactions and creates a new block
+    - Balances are updated only when blocks are mined
+    - This demonstrates how real blockchains process transactions in batches
+    
+    **7. Transaction Verification**
     - All transactions are digitally signed
-    - Signatures are verified before adding to the blockchain
+    - Signatures are verified before adding to the mempool
     - Invalid transactions are rejected
     
     #### 🛠️ How to Use:
     
     1. **Create Users**: Go to "User Management" and create at least 2 users
     2. **Make Transactions**: Send coins between users in "Create Transaction"
-    3. **Explore Blockchain**: View all blocks and transactions in "Blockchain Explorer"
-    4. **View Wallets**: Check user balances and keys in "User Wallets"
+    3. **View Mempool**: Check pending transactions in "Transaction Pool"
+    4. **Mine Blocks**: Process pending transactions in "Mine Block" tab
+    5. **Explore Blockchain**: View all mined blocks and transactions in "Blockchain Explorer"
+    6. **View Wallets**: Check user balances and keys in "User Wallets"
     
     #### 🔒 Security Features:
     

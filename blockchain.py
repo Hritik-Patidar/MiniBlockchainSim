@@ -40,6 +40,7 @@ class Blockchain:
     
     def __init__(self):
         self.chain: List[Block] = []
+        self.pending_transactions: List[Dict] = []
         self.create_genesis_block()
     
     def create_genesis_block(self):
@@ -83,8 +84,25 @@ class Blockchain:
         """Get all blocks as dictionaries"""
         return [block.to_dict() for block in self.chain]
     
-    def get_block_by_index(self, index: int) -> Dict:
+    def get_block_by_index(self, index: int) -> Dict | None:
         """Get a specific block by index"""
         if 0 <= index < len(self.chain):
             return self.chain[index].to_dict()
         return None
+    
+    def add_transaction_to_pool(self, transaction: Dict):
+        """Add a transaction to the pending transaction pool (mempool)"""
+        self.pending_transactions.append(transaction)
+    
+    def get_pending_transactions(self) -> List[Dict]:
+        """Get all pending transactions from the mempool"""
+        return self.pending_transactions
+    
+    def mine_pending_transactions(self) -> Block | None:
+        """Mine all pending transactions into a new block"""
+        if not self.pending_transactions:
+            return None
+        
+        new_block = self.add_block(self.pending_transactions.copy())
+        self.pending_transactions = []
+        return new_block
