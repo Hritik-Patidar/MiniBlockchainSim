@@ -307,13 +307,37 @@ with tab5:
     st.markdown("View all blocks and transactions in the blockchain")
     
     # Blockchain validity check
-    is_valid = st.session_state.blockchain.is_chain_valid()
-    if is_valid:
-        st.success("✅ Blockchain is valid and secure")
-    else:
-        st.error("❌ Blockchain integrity compromised!")
+    is_valid, message = st.session_state.blockchain.is_chain_valid(check_pow=True)
     
-    st.write(f"**Total Blocks:** {len(st.session_state.blockchain.chain)}")
+    col_valid1, col_valid2 = st.columns([2, 1])
+    
+    with col_valid1:
+        if is_valid:
+            st.success(f"✅ {message}")
+        else:
+            st.error(f"❌ Validation failed: {message}")
+    
+    with col_valid2:
+        if st.button("🔍 Validate Blockchain"):
+            is_valid, message = st.session_state.blockchain.is_chain_valid(check_pow=True)
+            if is_valid:
+                st.success("Validation passed!")
+            else:
+                st.error(f"Failed: {message}")
+    
+    # Blockchain statistics
+    stats = st.session_state.blockchain.get_chain_stats()
+    
+    col_stats1, col_stats2, col_stats3, col_stats4 = st.columns(4)
+    with col_stats1:
+        st.metric("Total Blocks", stats['total_blocks'])
+    with col_stats2:
+        st.metric("PoW Blocks", stats['pow_blocks'])
+    with col_stats3:
+        st.metric("Simple Blocks", stats['simple_blocks'])
+    with col_stats4:
+        st.metric("Total Transactions", stats['total_transactions'])
+    
     st.markdown("---")
     
     # Display all blocks

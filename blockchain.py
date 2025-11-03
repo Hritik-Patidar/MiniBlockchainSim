@@ -104,21 +104,59 @@ class Blockchain:
         self.chain.append(new_block)
         return new_block, attempts
     
-    def is_chain_valid(self) -> bool:
-        """Verify the integrity of the blockchain"""
+    def is_chain_valid(self, check_pow: bool = True) -> tuple[bool, str]:
+        """Verify the integrity of the blockchain
+        
+        Args:
+            check_pow: Whether to verify proof-of-work requirements
+            
+        Returns:
+            tuple: (is_valid, error_message) where error_message explains any validation failure
+        """
+        # Validate genesis block
+        if len(self.chain) > 0:
+            genesis = self.chain[0]
+            if genesis.hash != genesis.calculate_hash():
+                return False, "Genesis block: Hash mismatch (block has been tampered with)"
+            if genesis.previous_hash != "0":
+                return False, "Genesis block: Invalid previous hash (should be '0')"
+            if genesis.index != 0:
+                return False, "Genesis block: Invalid index (should be 0)"
+        
+        # Validate remaining blocks
         for i in range(1, len(self.chain)):
             current_block = self.chain[i]
             previous_block = self.chain[i - 1]
             
             # Check if the current block's hash is correct
             if current_block.hash != current_block.calculate_hash():
-                return False
+                return False, f"Block #{i}: Hash mismatch (block has been tampered with)"
             
             # Check if the previous hash matches
             if current_block.previous_hash != previous_block.hash:
-                return False
+                return False, f"Block #{i}: Previous hash doesn't match (chain link broken)"
+            
+            # Check proof-of-work if enabled
+            if check_pow and current_block.difficulty > 0:
+                required_prefix = "0" * current_block.difficulty
+                if not current_block.hash.startswith(required_prefix):
+                    return False, f"Block #{i}: Proof-of-work requirement not met (difficulty {current_block.difficulty})"
         
-        return True
+        return True, "Blockchain is valid"
+    
+    def get_chain_stats(self) -> Dict[str, Any]:
+        """Get statistics about the blockchain"""
+        total_blocks = len(self.chain)
+        pow_blocks = sum(1 for block in self.chain if block.difficulty > 0)
+        total_transactions = sum(len(block.transactions) for block in self.chain)
+        
+        return {
+            "total_blocks": total_blocks,
+            "pow_blocks": pow_blocks,
+            "simple_blocks": total_blocks - pow_blocks,
+            "total_transactions": total_transactions,
+            "current_difficulty": self.difficulty
+        }
     
     def get_all_blocks(self) -> List[Dict]:
         """Get all blocks as dictionaries"""
