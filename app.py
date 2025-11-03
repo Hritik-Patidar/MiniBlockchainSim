@@ -340,6 +340,66 @@ with tab5:
     
     st.markdown("---")
     
+    # Export functionality
+    st.subheader("📥 Export Blockchain Data")
+    
+    col_export1, col_export2, col_export3 = st.columns([1, 1, 1])
+    
+    with col_export1:
+        export_type = st.selectbox(
+            "Export Type:",
+            ["Full Blockchain", "Block Range"],
+            key="export_type"
+        )
+    
+    with col_export2:
+        include_metadata = st.checkbox("Include Metadata", value=True, key="include_metadata")
+    
+    if export_type == "Full Blockchain":
+        with col_export3:
+            if st.button("📥 Export to JSON"):
+                try:
+                    json_data = st.session_state.blockchain.export_to_json(include_metadata=include_metadata)
+                    st.download_button(
+                        label="💾 Download JSON",
+                        data=json_data,
+                        file_name=f"blockchain_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                        mime="application/json",
+                        key="download_full"
+                    )
+                    st.success(f"✅ Ready to download! ({len(json_data)} bytes)")
+                except Exception as e:
+                    st.error(f"Export failed: {str(e)}")
+    else:
+        # Block range export
+        total_blocks = len(st.session_state.blockchain.chain)
+        
+        col_range1, col_range2 = st.columns(2)
+        with col_range1:
+            start_idx = st.number_input("Start Block:", min_value=0, max_value=total_blocks-1, value=0, key="start_block")
+        with col_range2:
+            end_idx = st.number_input("End Block:", min_value=0, max_value=total_blocks-1, value=min(9, total_blocks-1), key="end_block")
+        
+        with col_export3:
+            if st.button("📥 Export Range"):
+                try:
+                    if start_idx > end_idx:
+                        st.error("Start block must be <= end block")
+                    else:
+                        json_data = st.session_state.blockchain.export_block_range(start_idx, end_idx)
+                        st.download_button(
+                            label="💾 Download JSON",
+                            data=json_data,
+                            file_name=f"blockchain_blocks_{start_idx}-{end_idx}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                            mime="application/json",
+                            key="download_range"
+                        )
+                        st.success(f"✅ Ready to download blocks {start_idx}-{end_idx}!")
+                except Exception as e:
+                    st.error(f"Export failed: {str(e)}")
+    
+    st.markdown("---")
+    
     # Display all blocks
     blocks = st.session_state.blockchain.get_all_blocks()
     

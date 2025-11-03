@@ -224,3 +224,55 @@ class Blockchain:
                     user_transactions.append(tx_with_block)
         
         return user_transactions
+    
+    def export_to_json(self, include_metadata: bool = True) -> str:
+        """Export the entire blockchain to JSON format
+        
+        Args:
+            include_metadata: Include blockchain metadata (difficulty, validation status)
+            
+        Returns:
+            JSON string representation of the blockchain
+        """
+        export_data = {
+            "blocks": self.get_all_blocks(),
+        }
+        
+        if include_metadata:
+            is_valid, message = self.is_chain_valid(check_pow=True)
+            stats = self.get_chain_stats()
+            
+            export_data["metadata"] = {
+                "export_timestamp": datetime.now().isoformat(),
+                "is_valid": is_valid,
+                "validation_message": message,
+                "statistics": stats
+            }
+        
+        return json.dumps(export_data, indent=2)
+    
+    def export_block_range(self, start_index: int, end_index: int) -> str:
+        """Export a range of blocks to JSON format
+        
+        Args:
+            start_index: Starting block index (inclusive)
+            end_index: Ending block index (inclusive)
+            
+        Returns:
+            JSON string representation of the block range
+        """
+        if start_index < 0 or end_index >= len(self.chain) or start_index > end_index:
+            raise ValueError("Invalid block range")
+        
+        blocks = [self.chain[i].to_dict() for i in range(start_index, end_index + 1)]
+        
+        export_data = {
+            "blocks": blocks,
+            "metadata": {
+                "export_timestamp": datetime.now().isoformat(),
+                "block_range": f"{start_index}-{end_index}",
+                "total_blocks": len(blocks)
+            }
+        }
+        
+        return json.dumps(export_data, indent=2)
