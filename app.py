@@ -4,7 +4,7 @@ from blockchain import Blockchain
 from user_wallet import WalletManager
 from digital_signature import DigitalSignature
 
-# Initialize session state
+
 if 'blockchain' not in st.session_state:
     st.session_state.blockchain = Blockchain()
 
@@ -18,22 +18,19 @@ st.set_page_config(
     layout="wide"
 )
 
-# Main title
-st.title("⛓️ Mini-Blockchain Simulator")
+st.title("Mini-Blockchain")
 st.markdown("---")
 
-# Create tabs
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-    "👤 User Management", 
-    "💸 Create Transaction", 
-    "📋 Transaction Pool",
-    "⛏️ Mine Block",
-    "⛓️ Blockchain Explorer",
-    "👛 User Wallets",
-    "ℹ️ About"
+    "User Management",
+    "Create Transaction",
+    "Transaction Pool",
+    "Mine Block",
+    "Blockchain Explorer",
+    "User Wallets",
+    "About"
 ])
 
-# Tab 1: User Management
 with tab1:
     st.header("User Management")
     st.markdown("Create new users with digital wallets")
@@ -50,7 +47,7 @@ with tab1:
                     st.error(f"User '{new_username}' already exists!")
                 else:
                     wallet = st.session_state.wallet_manager.create_wallet(new_username)
-                    st.success(f"✅ User '{new_username}' created successfully!")
+                    st.success(f"User '{new_username}' created successfully!")
                     st.info(f"Initial balance: {wallet.balance} coins")
             else:
                 st.warning("Please enter a username")
@@ -74,7 +71,7 @@ with tab2:
     users = st.session_state.wallet_manager.get_all_users()
     
     if len(users) < 2:
-        st.warning("⚠️ You need at least 2 users to create a transaction. Create users in the User Management tab.")
+        st.warning("You need at least 2 users to create a transaction. Create users in the User Management tab.")
     else:
         col1, col2 = st.columns([1, 1])
         
@@ -89,7 +86,7 @@ with tab2:
                 st.info(f"Sender's balance: {sender_balance:.2f} coins")
                 
                 if amount > sender_balance:
-                    st.error("⚠️ Insufficient balance!")
+                    st.error("Insufficient balance!")
         
         with col2:
             st.subheader("Transaction Preview")
@@ -139,25 +136,25 @@ with tab2:
                         # Add to mempool (pending transactions)
                         st.session_state.blockchain.add_transaction_to_pool(complete_transaction)
                         
-                        st.success("✅ Transaction created, signed, and added to mempool!")
-                        st.info("ℹ️ Transaction is pending. Go to 'Mine Block' tab to mine it into the blockchain.")
+                        st.success("Transaction created, signed, and added to mempool!")
+                        st.info("Transaction is pending. Go to 'Mine Block' tab to mine it into the blockchain.")
                     else:
-                        st.error("❌ Signature verification failed!")
+                        st.error(" Signature verification failed!")
                         
             except Exception as e:
                 st.error(f"Error creating transaction: {str(e)}")
 
 # Tab 3: Transaction Pool (Mempool)
 with tab3:
-    st.header("📋 Transaction Pool (Mempool)")
+    st.header(" Transaction Pool (Mempool)")
     st.markdown("View pending transactions waiting to be mined into blocks")
     
     pending = st.session_state.blockchain.get_pending_transactions()
     
     if not pending:
-        st.info("📭 No pending transactions in the mempool")
+        st.info(" No pending transactions in the mempool")
     else:
-        st.success(f"📬 {len(pending)} transaction(s) waiting to be mined")
+        st.success(f" {len(pending)} transaction(s) waiting to be mined")
         st.markdown("---")
         
         for i, tx in enumerate(pending):
@@ -173,23 +170,23 @@ with tab3:
                     st.write(f"**Timestamp:** {tx['timestamp']}")
                     st.write(f"**Status:** ⏳ Pending")
                     if tx.get('verified'):
-                        st.success("✅ Signature Verified")
+                        st.success(" Signature Verified")
                     else:
-                        st.error("❌ Signature Not Verified")
+                        st.error(" Signature Not Verified")
                 
                 if st.checkbox(f"Show signature (Tx #{i+1})", key=f"mempool_sig_{i}"):
                     st.code(tx.get('signature', 'No signature')[:100] + "...", language="text")
 
 # Tab 4: Mine Block
 with tab4:
-    st.header("⛏️ Mine Block")
+    st.header("Mine Block")
     st.markdown("Mine pending transactions into a new block with optional proof-of-work")
     
     pending = st.session_state.blockchain.get_pending_transactions()
     current_difficulty = st.session_state.blockchain.get_difficulty()
     
     # Mining Settings
-    st.subheader("⚙️ Mining Settings")
+    st.subheader("Mining Settings")
     col_settings1, col_settings2 = st.columns([1, 1])
     
     with col_settings1:
@@ -197,13 +194,13 @@ with tab4:
                              help="When enabled, miners must find a nonce that produces a hash with the required number of leading zeros")
         
         if use_pow:
-            st.info(f"ℹ️ Current Difficulty: {current_difficulty} (requires {current_difficulty} leading zeros)")
+            st.info(f" Current Difficulty: {current_difficulty} (requires {current_difficulty} leading zeros)")
     
     with col_settings2:
         if use_pow:
             new_difficulty = st.select_slider(
                 "Adjust Difficulty Level:",
-                options=[1, 2, 3, 4, 5, 6],
+                options=[1, 2, 3, 4, 5, 6,7,8],
                 value=current_difficulty,
                 help="Higher difficulty requires more computational work. Difficulty >4 may take several seconds."
             )
@@ -227,9 +224,9 @@ with tab4:
         st.write(f"**Proof-of-Work:** {'Enabled' if use_pow else 'Disabled'}")
         
         if pending:
-            st.info("⛏️ Ready to mine new block")
+            st.info(" Ready to mine new block")
         else:
-            st.warning("📭 No transactions to mine")
+            st.warning(" No transactions to mine")
     
     with col2:
         st.subheader("Block Preview")
@@ -245,20 +242,14 @@ with tab4:
     
     st.markdown("---")
     
-    if st.button("⛏️ Mine Block", type="primary", disabled=len(pending) == 0):
+    if st.button("⛏ Mine Block", type="primary", disabled=len(pending) == 0):
         try:
-            # Show mining progress if using PoW
+
             if use_pow:
                 mining_placeholder = st.empty()
-                mining_placeholder.info("⛏️ Mining in progress... Finding valid nonce...")
-            
-            # Update balances for all pending transactions
-            for tx in pending:
-                st.session_state.wallet_manager.update_balances(
-                    tx['sender'], 
-                    tx['receiver'], 
-                    tx['amount']
-                )
+                mining_placeholder.info("Mining in progress... Finding valid nonce...")
+
+
             
             # Mine the block
             import time
@@ -266,9 +257,9 @@ with tab4:
             new_block, attempts = st.session_state.blockchain.mine_pending_transactions(use_pow=use_pow)
             end_time = time.time()
             mining_time = end_time - start_time
-            
-            if new_block:
-                st.success(f"✅ Block #{new_block.index} mined successfully!")
+
+            if  new_block:
+                st.success(f" Block #{new_block.index} mined successfully!")
                 st.balloons()
                 
                 col_result1, col_result2 = st.columns([1, 1])
@@ -284,8 +275,15 @@ with tab4:
                         st.write(f"**Mining Time:** {mining_time:.2f} seconds")
                         hash_rate = attempts / mining_time if mining_time > 0 else 0
                         st.write(f"**Hash Rate:** {hash_rate:.0f} H/s")
-                    
-                st.info("💰 All balances have been updated!")
+
+                for tx in pending:
+                    st.session_state.wallet_manager.update_balances(
+                        tx['sender'],
+                        tx['receiver'],
+                        tx['amount']
+                    )
+                st.info(" All balances have been updated!")
+                time.sleep(10)
                 st.rerun()
             else:
                 st.error("Failed to mine block")
@@ -299,7 +297,7 @@ with tab4:
         st.subheader("Recent Blocks")
         recent_blocks = st.session_state.blockchain.get_all_blocks()[-5:]
         for block in reversed(recent_blocks[1:]):  # Skip genesis block
-            st.write(f"📦 Block #{block['index']} - {len(block['transactions'])} tx - Hash: `{block['hash'][:16]}...`")
+            st.write(f" Block #{block['index']} - {len(block['transactions'])} tx - Hash: `{block['hash'][:16]}...`")
 
 # Tab 5: Blockchain Explorer
 with tab5:
@@ -313,12 +311,12 @@ with tab5:
     
     with col_valid1:
         if is_valid:
-            st.success(f"✅ {message}")
+            st.success(f" {message}")
         else:
-            st.error(f"❌ Validation failed: {message}")
+            st.error(f" Validation failed: {message}")
     
     with col_valid2:
-        if st.button("🔍 Validate Blockchain"):
+        if st.button(" Validate Blockchain"):
             is_valid, message = st.session_state.blockchain.is_chain_valid(check_pow=True)
             if is_valid:
                 st.success("Validation passed!")
@@ -340,71 +338,14 @@ with tab5:
     
     st.markdown("---")
     
-    # Export functionality
-    st.subheader("📥 Export Blockchain Data")
-    
-    col_export1, col_export2, col_export3 = st.columns([1, 1, 1])
-    
-    with col_export1:
-        export_type = st.selectbox(
-            "Export Type:",
-            ["Full Blockchain", "Block Range"],
-            key="export_type"
-        )
-    
-    with col_export2:
-        include_metadata = st.checkbox("Include Metadata", value=True, key="include_metadata")
-    
-    if export_type == "Full Blockchain":
-        with col_export3:
-            if st.button("📥 Export to JSON"):
-                try:
-                    json_data = st.session_state.blockchain.export_to_json(include_metadata=include_metadata)
-                    st.download_button(
-                        label="💾 Download JSON",
-                        data=json_data,
-                        file_name=f"blockchain_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                        mime="application/json",
-                        key="download_full"
-                    )
-                    st.success(f"✅ Ready to download! ({len(json_data)} bytes)")
-                except Exception as e:
-                    st.error(f"Export failed: {str(e)}")
-    else:
-        # Block range export
-        total_blocks = len(st.session_state.blockchain.chain)
-        
-        col_range1, col_range2 = st.columns(2)
-        with col_range1:
-            start_idx = st.number_input("Start Block:", min_value=0, max_value=total_blocks-1, value=0, key="start_block")
-        with col_range2:
-            end_idx = st.number_input("End Block:", min_value=0, max_value=total_blocks-1, value=min(9, total_blocks-1), key="end_block")
-        
-        with col_export3:
-            if st.button("📥 Export Range"):
-                try:
-                    if start_idx > end_idx:
-                        st.error("Start block must be <= end block")
-                    else:
-                        json_data = st.session_state.blockchain.export_block_range(start_idx, end_idx)
-                        st.download_button(
-                            label="💾 Download JSON",
-                            data=json_data,
-                            file_name=f"blockchain_blocks_{start_idx}-{end_idx}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                            mime="application/json",
-                            key="download_range"
-                        )
-                        st.success(f"✅ Ready to download blocks {start_idx}-{end_idx}!")
-                except Exception as e:
-                    st.error(f"Export failed: {str(e)}")
-    
+
     st.markdown("---")
     
     # Display all blocks
     blocks = st.session_state.blockchain.get_all_blocks()
     
     for block in reversed(blocks):
-        with st.expander(f"📦 Block #{block['index']} - {len(block['transactions'])} transaction(s)", expanded=(block['index'] == len(blocks) - 1)):
+        with st.expander(f"Block #{block['index']} - {len(block['transactions'])} transaction(s)", expanded=(block['index'] == len(blocks) - 1)):
             col1, col2 = st.columns([1, 1])
             
             with col1:
@@ -416,7 +357,7 @@ with tab5:
             
             with col2:
                 if block['index'] == 0:
-                    st.info("🎉 Genesis Block (First block in the chain)")
+                    st.info(" Genesis Block (First block in the chain)")
                 else:
                     st.write(f"**Transactions:** {len(block['transactions'])}")
                     
@@ -424,7 +365,7 @@ with tab5:
                     block_difficulty = block.get('difficulty', 0)
                     if block_difficulty > 0:
                         leading_zeros = len(block['hash']) - len(block['hash'].lstrip('0'))
-                        st.success(f"⛏️ Proof-of-Work: Difficulty {block_difficulty} ({leading_zeros} leading zeros, nonce: {block.get('nonce', 0)})")
+                        st.success(f"⛏ Proof-of-Work: Difficulty {block_difficulty} ({leading_zeros} leading zeros, nonce: {block.get('nonce', 0)})")
                     else:
                         st.info("Simple hash (no PoW)")
             
@@ -444,9 +385,9 @@ with tab5:
                     with tx_col2:
                         st.write(f"• Timestamp: {tx['timestamp']}")
                         if tx.get('verified'):
-                            st.success("✅ Signature Verified")
+                            st.success("Signature Verified")
                         else:
-                            st.error("❌ Signature Not Verified")
+                            st.error(" Signature Not Verified")
                     
                     if st.checkbox(f"Show signature details (Block {block['index']}, Tx {i+1})", key=f"sig_{block['index']}_{i}"):
                         st.code(tx.get('signature', 'No signature')[:100] + "...", language="text")
@@ -481,7 +422,7 @@ with tab6:
             st.markdown("---")
             
             # Transaction History
-            st.subheader("📜 Transaction History")
+            st.subheader(" Transaction History")
             
             user_transactions = st.session_state.blockchain.get_user_transactions(selected_user)
             
@@ -574,19 +515,19 @@ with tab6:
                             st.write(f"**Timestamp:** {tx['timestamp']}")
                             st.write(f"**Block Hash:** `{tx['block_hash'][:16]}...`")
                             if tx.get('verified'):
-                                st.success("✅ Verified")
+                                st.success(" Verified")
                             else:
-                                st.error("❌ Not Verified")
+                                st.error(" Not Verified")
             
             st.markdown("---")
             
             # Public Key
-            st.subheader("🔓 Public Key")
+            st.subheader(" Public Key")
             st.text_area("Public Key (Share this for receiving payments):", wallet.public_key, height=150, key=f"pub_{selected_user}")
             
             # Private Key (with warning)
-            st.subheader("🔐 Private Key")
-            st.warning("⚠️ Keep this private! Never share your private key!")
+            st.subheader(" Private Key")
+            st.warning("Keep this private! Never share your private key!")
             
             show_private = st.checkbox("Show Private Key", key=f"show_priv_{selected_user}")
             if show_private:
@@ -599,11 +540,11 @@ with tab7:
     st.header("About This Application")
     
     st.markdown("""
-    ### 🎓 Mini-Blockchain Educational Simulator
+    ###  Mini-Blockchain  Simulator
     
     This application demonstrates the fundamental concepts of blockchain technology:
     
-    #### 🔗 Core Features:
+    ####  Core Features:
     
     **1. Blockchain Structure**
     - Each block contains an index, timestamp, transactions, and hashes
@@ -649,7 +590,7 @@ with tab7:
     - Signatures are verified before adding to the mempool
     - Invalid transactions are rejected
     
-    #### 🛠️ How to Use:
+    #### How to Use:
     
     1. **Create Users**: Go to "User Management" and create at least 2 users
     2. **Make Transactions**: Send coins between users in "Create Transaction"
@@ -658,14 +599,14 @@ with tab7:
     5. **Explore Blockchain**: View all mined blocks and transactions in "Blockchain Explorer"
     6. **View Wallets**: Check user balances and keys in "User Wallets"
     
-    #### 🔒 Security Features:
+    #### Security Features:
     
     - RSA-2048 encryption for digital signatures
     - SHA-256 hashing for block integrity
     - Blockchain validation to detect tampering
     - Balance verification to prevent overspending
     
-    #### 📚 Educational Purpose:
+    ####  Educational Purpose:
     
     This simulator demonstrates core blockchain concepts. Production blockchains also include:
     - Network distribution across multiple nodes (peer-to-peer)
@@ -681,4 +622,4 @@ with tab7:
 
 # Footer
 st.markdown("---")
-st.markdown("**Mini-Blockchain  | Blockchain Implementation | Powered by Python & Streamlit")
+st.markdown("**Mini-Blockchain  | Blockchain Implementation ")

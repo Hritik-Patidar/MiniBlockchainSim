@@ -5,8 +5,7 @@ from typing import List, Dict, Any
 
 
 class Block:
-    """Represents a single block in the blockchain"""
-    
+
     def __init__(self, index: int, timestamp: str, transactions: List[Dict], previous_hash: str, nonce: int = 0, difficulty: int = 0):
         self.index = index
         self.timestamp = timestamp
@@ -17,7 +16,6 @@ class Block:
         self.hash = self.calculate_hash()
     
     def calculate_hash(self) -> str:
-        """Calculate SHA-256 hash of the block"""
         block_string = json.dumps({
             "index": self.index,
             "timestamp": self.timestamp,
@@ -28,7 +26,7 @@ class Block:
         return hashlib.sha256(block_string.encode()).hexdigest()
     
     def to_dict(self) -> Dict[str, Any]:
-        """Convert block to dictionary for JSON serialization"""
+
         return {
             "index": self.index,
             "timestamp": self.timestamp,
@@ -40,14 +38,7 @@ class Block:
         }
     
     def mine_block(self, difficulty: int) -> int:
-        """Mine the block using proof-of-work
-        
-        Args:
-            difficulty: Number of leading zeros required in hash
-            
-        Returns:
-            Number of hash attempts (nonce) required
-        """
+
         target = "0" * difficulty
         attempts = 0
         
@@ -57,6 +48,7 @@ class Block:
             self.hash = self.calculate_hash()
         
         return attempts
+
 
 
 class Blockchain:
@@ -69,24 +61,16 @@ class Blockchain:
         self.create_genesis_block()
     
     def create_genesis_block(self):
-        """Create the first block in the blockchain"""
+
         genesis_block = Block(0, datetime.now().isoformat(), [], "0")
         self.chain.append(genesis_block)
     
     def get_latest_block(self) -> Block:
-        """Get the most recent block in the chain"""
+
         return self.chain[-1]
     
     def add_block(self, transactions: List[Dict], mine_with_pow: bool = False):
-        """Add a new block to the blockchain
-        
-        Args:
-            transactions: List of transactions to include in the block
-            mine_with_pow: Whether to use proof-of-work mining
-            
-        Returns:
-            tuple: (new_block, attempts) where attempts is number of hashes calculated
-        """
+
         latest_block = self.get_latest_block()
         difficulty_used = self.difficulty if mine_with_pow else 0
         new_block = Block(
@@ -105,14 +89,7 @@ class Blockchain:
         return new_block, attempts
     
     def is_chain_valid(self, check_pow: bool = True) -> tuple[bool, str]:
-        """Verify the integrity of the blockchain
-        
-        Args:
-            check_pow: Whether to verify proof-of-work requirements
-            
-        Returns:
-            tuple: (is_valid, error_message) where error_message explains any validation failure
-        """
+
         # Validate genesis block
         if len(self.chain) > 0:
             genesis = self.chain[0]
@@ -128,7 +105,7 @@ class Blockchain:
             current_block = self.chain[i]
             previous_block = self.chain[i - 1]
             
-            # Check if the current block's hash is correct
+            # Check if the current block hash is correct
             if current_block.hash != current_block.calculate_hash():
                 return False, f"Block #{i}: Hash mismatch (block has been tampered with)"
             
@@ -136,7 +113,7 @@ class Blockchain:
             if current_block.previous_hash != previous_block.hash:
                 return False, f"Block #{i}: Previous hash doesn't match (chain link broken)"
             
-            # Check proof-of-work if enabled
+            # Check proof of work if enabled
             if check_pow and current_block.difficulty > 0:
                 required_prefix = "0" * current_block.difficulty
                 if not current_block.hash.startswith(required_prefix):
@@ -145,7 +122,6 @@ class Blockchain:
         return True, "Blockchain is valid"
     
     def get_chain_stats(self) -> Dict[str, Any]:
-        """Get statistics about the blockchain"""
         total_blocks = len(self.chain)
         pow_blocks = sum(1 for block in self.chain if block.difficulty > 0)
         total_transactions = sum(len(block.transactions) for block in self.chain)
@@ -159,32 +135,21 @@ class Blockchain:
         }
     
     def get_all_blocks(self) -> List[Dict]:
-        """Get all blocks as dictionaries"""
         return [block.to_dict() for block in self.chain]
     
     def get_block_by_index(self, index: int) -> Dict | None:
-        """Get a specific block by index"""
         if 0 <= index < len(self.chain):
             return self.chain[index].to_dict()
         return None
     
     def add_transaction_to_pool(self, transaction: Dict):
-        """Add a transaction to the pending transaction pool (mempool)"""
         self.pending_transactions.append(transaction)
     
     def get_pending_transactions(self) -> List[Dict]:
-        """Get all pending transactions from the mempool"""
         return self.pending_transactions
     
     def mine_pending_transactions(self, use_pow: bool = False) -> tuple[Block | None, int]:
-        """Mine all pending transactions into a new block
-        
-        Args:
-            use_pow: Whether to use proof-of-work for mining
-            
-        Returns:
-            tuple: (new_block, attempts) where attempts is number of hashes calculated
-        """
+
         if not self.pending_transactions:
             return None, 0
         
@@ -193,24 +158,14 @@ class Blockchain:
         return new_block, attempts
     
     def set_difficulty(self, difficulty: int):
-        """Set the mining difficulty level"""
         if difficulty < 1 or difficulty > 6:
             raise ValueError("Difficulty must be between 1 and 6")
         self.difficulty = difficulty
     
     def get_difficulty(self) -> int:
-        """Get the current mining difficulty"""
         return self.difficulty
     
     def get_user_transactions(self, username: str) -> List[Dict]:
-        """Get all transactions for a specific user (as sender or receiver)
-        
-        Args:
-            username: The username to get transactions for
-            
-        Returns:
-            List of transactions with block information
-        """
         user_transactions = []
         
         for block in self.chain:
@@ -226,14 +181,7 @@ class Blockchain:
         return user_transactions
     
     def export_to_json(self, include_metadata: bool = True) -> str:
-        """Export the entire blockchain to JSON format
-        
-        Args:
-            include_metadata: Include blockchain metadata (difficulty, validation status)
-            
-        Returns:
-            JSON string representation of the blockchain
-        """
+
         export_data = {
             "blocks": self.get_all_blocks(),
         }
@@ -252,15 +200,7 @@ class Blockchain:
         return json.dumps(export_data, indent=2)
     
     def export_block_range(self, start_index: int, end_index: int) -> str:
-        """Export a range of blocks to JSON format
-        
-        Args:
-            start_index: Starting block index (inclusive)
-            end_index: Ending block index (inclusive)
-            
-        Returns:
-            JSON string representation of the block range
-        """
+
         if start_index < 0 or end_index >= len(self.chain) or start_index > end_index:
             raise ValueError("Invalid block range")
         
