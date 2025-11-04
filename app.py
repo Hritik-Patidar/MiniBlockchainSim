@@ -681,4 +681,4 @@ with tab7:
 
 # Footer
 st.markdown("---")
-st.markdown("**Mini-Blockchain Simulator** | Educational Blockchain Implementation | Powered by Python & Streamlit")
+st.markdown("**Mini-Blockchain  | Blockchain Implementation | Powered by Python & Streamlit")
