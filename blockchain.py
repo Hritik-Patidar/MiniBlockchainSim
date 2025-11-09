@@ -5,7 +5,6 @@ from typing import List, Dict, Any
 
 
 class Block:
-
     def __init__(self, index: int, timestamp: str, transactions: List[Dict], previous_hash: str, nonce: int = 0, difficulty: int = 0):
         self.index = index
         self.timestamp = timestamp

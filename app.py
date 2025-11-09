@@ -263,7 +263,8 @@ with tab4:
                 st.balloons()
                 
                 col_result1, col_result2 = st.columns([1, 1])
-                
+
+
                 with col_result1:
                     st.write(f"**Block Hash:** `{new_block.hash}`")
                     st.write(f"**Nonce:** {new_block.nonce}")

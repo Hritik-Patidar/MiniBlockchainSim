@@ -63,6 +63,7 @@ class WalletManager:
     
     def get_balance(self, username: str) -> float:
 
+
         if username not in self.wallets:
             return 0.0
         return self.wallets[username].balance

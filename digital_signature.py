@@ -57,6 +57,7 @@ class DigitalSignature:
     def verify_signature(transaction_data: dict, signature: str, public_key_pem: str) -> bool:
         try:
 
+
             transaction_string = json.dumps(transaction_data, sort_keys=True)
             
             # Load public key
